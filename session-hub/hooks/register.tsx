@@ -249,6 +249,14 @@ function modelName(id: string) {
   return `${family.charAt(0).toUpperCase()}${family.slice(1)} ${m[2] ?? ''}${m[3] === undefined ? '' : `.${m[3]}`}`
 }
 
+// A model's own setting wins over the top-level one; the id may carry a "[1m]" the settings key leaves off.
+function settingsEffort(merged: Record<string, unknown> | undefined, model: string | undefined) {
+  const perModel = (merged?.modelSettings ?? {}) as Record<string, { effortLevel?: unknown } | undefined>
+  const own = model === undefined ? undefined : (perModel[model] ?? perModel[model.replace(/\[[^\]]*\]$/, '')])
+  const level = own?.effortLevel ?? merged?.effortLevel
+  return typeof level === 'string' || typeof level === 'number' ? String(level) : null
+}
+
 // "## main...origin/main [ahead 1]", "## No commits yet on main"
 function parseBranch(head: string) {
   return /^## (?:No commits yet on )?(.+?)(?:\.\.\.| \[|$)/.exec(head)?.[1] ?? null
@@ -658,6 +666,8 @@ let waitBeat: Timer | undefined
 let waitPoller: Timer | undefined
 let lastWaiting: Set<string> | undefined
 let foundHubDir: string | undefined
+// the main loop's last request: the model it went to and the effort it asked for, null for none
+let stepEffort: { model: string; effort: string | null } | undefined
 let callSeq = 0
 let servicePoller: Timer | undefined
 let isChecking = false
@@ -803,7 +813,11 @@ async function refreshStatus($: EngineInterface, isFull: boolean) {
   const cwd = await quietly($.session.cwd())
   const host = await quietly($.env.get('COMPUTERNAME'))
   const merged = (await quietly($.settings.read())) as Record<string, unknown> | undefined
-  const effort = (await quietly($.env.get('CLAUDE_EFFORT'))) ?? merged?.effortLevel
+  // what the last request went out with, while it went to this model; else what the settings ask
+  const effort =
+    model !== undefined && stepEffort !== undefined && modelName(stepEffort.model) === modelName(model)
+      ? stepEffort.effort
+      : settingsEffort(merged, model)
   let branch: string | null = null
   let dirty = 0
   if (cwd !== undefined && (await quietly($.session.repo())) != null) {
@@ -818,7 +832,7 @@ async function refreshStatus($: EngineInterface, isFull: boolean) {
   }
   const next: PanelStatus = {
     model: model === undefined ? null : modelName(model),
-    effort: typeof effort === 'string' ? effort : null,
+    effort,
     host: host ?? null,
     cwd: cwd ?? null,
     branch,
@@ -1226,6 +1240,12 @@ export const register: Register = (on, options) => {
     await readSurfaces($).catch(() => undefined)
 
     return detached
+  })
+
+  // passes every request through; only notes the effort the main loop's goes out with
+  on('turn.step', async function* (_$, e, next) {
+    if (e.agentId === undefined) stepEffort = { model: e.model, effort: e.effort === undefined ? null : String(e.effort) }
+    return yield* next(e)
   })
 
   on('turn.complete', async ($, e, next) => {
