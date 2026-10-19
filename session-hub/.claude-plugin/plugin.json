@@ -1,0 +1,50 @@
+{
+  "name": "session-hub",
+  "version": "0.1.0",
+  "description": "See and message your local, Remote Control and cloud sessions; get pinged when a long turn or a peer finishes",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "pollSeconds": {
+      "type": "number",
+      "title": "Refresh every (seconds)",
+      "description": "How often the session list refreshes. 0 refreshes only when you open the pane or press Refresh.",
+      "default": 15
+    },
+    "awaySeconds": {
+      "type": "number",
+      "title": "Ping after turns longer than (seconds)",
+      "description": "A finished turn at least this long sends a push to your phone (or a chime if you're at the desk). 0 turns it off.",
+      "default": 60
+    },
+    "pingPeerFinish": {
+      "type": "boolean",
+      "title": "Ping when a peer session finishes",
+      "description": "Push or chime when another session goes from working to idle.",
+      "default": true
+    },
+    "deskSound": {
+      "type": "boolean",
+      "title": "Chime when you're at the desk",
+      "description": "Play a Windows sound instead of a phone push when Claude Code sees you're present.",
+      "default": true
+    },
+    "sidebar": {
+      "type": "boolean",
+      "title": "Panel on the right in fullscreen",
+      "description": "In the fullscreen layout (/tui fullscreen), dock the panel (session tabs above, status line below) on the right instead of the band.",
+      "default": true
+    },
+    "panelPercent": {
+      "type": "number",
+      "title": "Panel width (% of the terminal)",
+      "description": "The panel's share of the terminal when it opens: 30 is a 7:3 split. 15 to 60; a width you drag the panel to wins.",
+      "default": 30
+    },
+    "showBand": {
+      "type": "boolean",
+      "title": "Show the sessions band above the prompt",
+      "description": "A one-line summary of your sessions with an Open button.",
+      "default": true
+    }
+  }
+}

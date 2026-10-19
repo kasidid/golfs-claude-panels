@@ -1,0 +1,6 @@
+{
+  "name": "kasid-plugins",
+  "owner": { "name": "kasid" },
+  "description": "Claude Code mods: session-hub, a right-hand panel for your local, Remote Control and cloud sessions plus the status line",
+  "plugins": [{ "name": "session-hub", "source": "./session-hub" }]
+}
