@@ -1,7 +1,7 @@
 {
   "name": "session-hub",
   "version": "0.1.0",
-  "description": "See and message your local, Remote Control and cloud sessions; get pinged when a long turn or a peer finishes",
+  "description": "A right-hand panel: tasks, your other sessions (message, rename, see who needs you), links, service checks, and your status line",
   "types": "./types/index.d.ts",
   "userConfig": {
     "pollSeconds": {
@@ -39,6 +39,12 @@
       "title": "Panel width (% of the terminal)",
       "description": "The panel's share of the terminal when it opens: 30 is a 7:3 split. 15 to 60; a width you drag the panel to wins.",
       "default": 30
+    },
+    "services": {
+      "type": "string",
+      "title": "Services tab",
+      "description": "Comma-separated name=URL pairs to watch, e.g. gpu=http://my-pc:8188, ollama=http://localhost:11434. A ComfyUI address also shows its GPU, free VRAM and queue. Empty hides the tab.",
+      "default": ""
     },
     "showBand": {
       "type": "boolean",
