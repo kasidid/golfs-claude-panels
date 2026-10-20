@@ -241,7 +241,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     on('session.cwd', () => ({ value: 'C:\\Users\\demo' }))
     on('session.repo', () => ({ value: null }))
     on('env.get', { name: 'COMPUTERNAME' }, () => ({ value: 'DEMO-PC' }))
-    on('settings.read', () => ({ value: { effortLevel: 'high' } }))
+    // the model's own setting wins over the top-level one
+    on('settings.read', () => ({ value: { effortLevel: 'high', modelSettings: { 'claude-opus-5-5': { effortLevel: 'xhigh' } } } }))
 
     const ui = await $.ui.mount({
       plugin: 'session-hub',
@@ -255,10 +256,39 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     expect((await ui.find({ key: 'tab-sessions' }))?.text).toContain('Sessions')
     expect((await ui.find({ key: 'peer-c9c1f2' }))?.text).toContain('claude-42')
-    expect((await ui.find({ type: 'Text', text: /Opus 5\.5 \[high\]/ }))?.text).toContain('DEMO-PC')
+    expect((await ui.find({ type: 'Text', text: /Opus 5\.5 \[xhigh\]/ }))?.text).toContain('DEMO-PC')
     expect((await ui.find({ type: 'Text', text: /5h 42%/ }))?.text).toContain('in 2h 05m')
     expect((await ui.find({ type: 'Text', text: /7d 18%/ }))?.text).toContain('resets in 3d 4h')
     expect((await ui.find({ type: 'Text', text: /38%/ }))?.text).toContain('(76K / 200K)  $0.42')
+  })
+
+  test(`the status line shows the effort the main loop's last request went out with (${surface})`, async ($, on) => {
+    mock.clock(on, { now: 1_000_000 })
+    on('tool.call', { tool: 'ListAgents' }, () => ({ result: LISTING }))
+    on('session.model', () => ({ value: 'claude-opus-5-5' }))
+    on('session.repo', () => ({ value: null }))
+    on('settings.read', () => ({ value: { effortLevel: 'high' } }))
+    on('turn.step', async function* (_$, e) {
+      return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn' as const, usage: null }
+    })
+
+    // a subagent's request, sent last, leaves it be
+    for (const agentId of [undefined, 'a1']) {
+      const step = $.turn.step({ turnId: 't1', index: 0, model: 'claude-opus-5-5', effort: agentId === undefined ? 'max' : 'low', messageCount: 1, agentId })
+      for await (const chunk of step) void chunk
+    }
+
+    const ui = await $.ui.mount({
+      plugin: 'session-hub',
+      surface,
+      component: 'Pane',
+      requestId: 'session-hub',
+      props: { ...PANE_PROPS, bodyColumns: 46 },
+    })
+    await ui.press({ key: 'tab-sessions' })
+    await ui.press({ key: 'refresh' })
+
+    expect((await ui.find({ type: 'Text', text: /Opus 5\.5/ }))?.text).toContain('Opus 5.5 [max]')
   })
 }
 
